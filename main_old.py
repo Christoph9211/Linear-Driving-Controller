@@ -1,5 +1,5 @@
 import time
-from machine import Pin, I2C  #, PWM
+from machine import Pin, I2C, PWM
 from mpu6050 import init_mpu6050, get_mpu6050_data
 # import rp2                                            # needed for ws2812 PIO
 from pico_car import Pico_Car                         # put your Pico_Car class in pico_car.py
@@ -19,9 +19,9 @@ def calibrate_gyro_bias(num_samples=100):
         bias[k] /= num_samples
     return bias
 
-# print("Calibrating gyro bias… keep robot still")
-# gyro_bias = calibrate_gyro_bias()
-# print("Gyro bias =", gyro_bias)
+print("Calibrating gyro bias… keep robot still")
+gyro_bias = calibrate_gyro_bias()
+print("Gyro bias =", gyro_bias)
 
 ### ── KALMAN FILTER ──────────────────────────────────────────────────────────
 class Kalman1D:
@@ -66,52 +66,37 @@ gyro_bias = calibrate_gyro_bias()
 print("Bias:", gyro_bias, "  done.")
 
 ### ── CONTROL CONSTANTS ─────────────────────────────────────────────────────
-BASE_SPEED   = 65      # “normal” forward speed while steering
-FULL_SPEED   = 155      # max speed when heading is on target
-KP           = 5.0     # proportional gain
-TOLERANCE_DEG = 1.35    # how close (deg) counts as “equal”
+BASE_SPEED = 120
+KP         = 15.0        # tune to taste
 
 ### ── MAIN LOOP ─────────────────────────────────────────────────────────────
 yaw = 0.0
 prev_ms = time.ticks_ms()
-target_yaw   = None
-drive_enabled = False
+target_yaw   = None       # not set yet
+drive_enabled = False     # start idle
 
 while True:
-    try:
-        raw  = get_mpu6050_data(i2c)
-        now  = time.ticks_ms()
-        dt   = time.ticks_diff(now, prev_ms) / 1000.0
-        prev_ms = now
+    raw  = get_mpu6050_data(i2c)
+    now  = time.ticks_ms()
+    dt   = time.ticks_diff(now, prev_ms) / 1000.0
+    prev_ms = now
 
-        # integrate gyro Z (bias-corrected)
-        yaw += (raw['gyro']['z'] - gyro_bias['z']) * dt
-        filt_yaw = kf_yaw.update(yaw)
+    # integrate gyro Z (bias-corrected)
+    yaw += (raw['gyro']['z'] - gyro_bias['z']) * dt
+    filt_yaw = kf_yaw.update(yaw)
 
-        # lock heading & start driving
-        if target_yaw is None:
-            target_yaw   = filt_yaw
-            drive_enabled = True
-            print("Target heading locked:", target_yaw)
+    # --- LOCK HEADING then ENABLE DRIVE ---
+    if target_yaw is None:
+        target_yaw = filt_yaw          # take snapshot of current heading
+        drive_enabled = True           # ok, start rolling
+        print("Target heading locked:", target_yaw)
 
-        if drive_enabled:
-            error = filt_yaw - target_yaw           # +ve = veer right
+    if drive_enabled:
+        error      = filt_yaw - target_yaw
+        correction = KP * error        # flip sign here if needed
 
-            if abs(error) <= TOLERANCE_DEG:
-                # Heading is “equal” → FULL SPEED STRAIGHT
-                drive(FULL_SPEED, FULL_SPEED)
-            else:
-                # Off-axis → steer proportionally
-                correction = KP * error             # flip sign if needed
-                left_cmd   = BASE_SPEED + correction
-                right_cmd  = BASE_SPEED - correction
-                drive(left_cmd, right_cmd)
-                # Debug prints (uncomment to see values)
-                print(f"Yaw: {filt_yaw:.3f}°, Error: {error:.2f}°, Correction: {correction:.2f}")
+        left_cmd  = BASE_SPEED + correction
+        right_cmd = BASE_SPEED - correction
+        drive(left_cmd, right_cmd)
 
-        time.sleep_ms(5)
-
-    except Exception as e:
-        print(f"Error: {e}")
-        stop()
-        break
+    time.sleep_ms(10)

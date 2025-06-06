@@ -49,8 +49,8 @@ def clamp(v, lo, hi):
     return lo if v < lo else hi if v > hi else v
 
 def drive(left_spd, right_spd):
-    left  = int(clamp(left_spd,  0, 255) * 257)
-    right = int(clamp(right_spd, 0, 255) * 257)
+    left  = int(clamp(left_spd,  0, 155) * 257)
+    right = int(clamp(right_spd, 0, 155) * 257)
     for m in car._motors[::2]:
         m.duty_u16(left)
     for m in car._motors[1::2]:
