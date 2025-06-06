@@ -147,8 +147,8 @@ def drive_straight(target_speed, target_yaw=0, kp=10.0, max_correction=50):
         right_speed = target_speed + correction
 
         # Ensure speeds are within valid range (0-255)
-        left_speed = max(0, min(155, left_speed))
-        right_speed = max(0, min(155, right_speed))
+        left_speed = max(0, min(255, left_speed))
+        right_speed = max(0, min(255, right_speed))
 
         # Drive motors using the motor instance
         motor.Car_Forward(int(left_speed), int(right_speed))
