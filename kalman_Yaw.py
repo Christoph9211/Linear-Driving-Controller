@@ -3,7 +3,7 @@ from machine import Pin, I2C
 from mpu6050 import init_mpu6050, get_mpu6050_data 
 
 # Setup I2C and initialize MPU6050
-i2c = I2C(0, scl=Pin(25), sda=Pin(24), freq=400000)
+i2c = I2C(0, scl=Pin(9), sda=Pin(8), freq=400000)
 init_mpu6050(i2c)
 
 def calibrate_gyro_bias(i2c, num_samples=100):
@@ -20,7 +20,8 @@ def calibrate_gyro_bias(i2c, num_samples=100):
     bias['z'] /= num_samples
     
     return bias
-
+# Calibrate the gyro
+# gyro_bias = calibrate_gyro_bias(i2c)
 class KalmanFilter:
     def __init__(self, process_variance, measurement_variance, estimated_measurement_variance):
         self.process_variance = process_variance
@@ -63,5 +64,5 @@ while True:
     # Filter the raw yaw using the Kalman filter
     yaw = kalman_yaw.update(raw_yaw)
 
-    print("Filtered Yaw: {:.2f} degrees".format(yaw))
+    print("Filtered Yaw: {:.3f} degrees".format(yaw))
     time.sleep_ms(10)

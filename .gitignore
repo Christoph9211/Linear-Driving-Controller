@@ -1,2 +1,4 @@
 .micropico
 .vscode
+.pyc
+__pycache__
