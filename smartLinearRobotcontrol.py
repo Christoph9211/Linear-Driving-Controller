@@ -112,7 +112,7 @@ def mpu6050_get_yaw():
         print("Filtered Yaw: {:.2f} degrees".format(yaw))
         time.sleep_ms(10)
 
-def drive_straight(target_speed, target_yaw=0, kp=10.0, max_correction=50):
+def drive_straight(target_speed, target_yaw=0, kp=5.0, max_correction=50):
     """
     Drive the robot straight while compensating for yaw drift.
 
